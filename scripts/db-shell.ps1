@@ -48,10 +48,8 @@ $psql = Find-Psql
 $connectionParts = @('connect_timeout=10')
 
 if ($Target -eq 'local') {
-    $propertiesPath = Join-Path $PSScriptRoot '..\src\main\resources\application.properties'
-    $properties = Get-Content -LiteralPath $propertiesPath
-    $jdbcUrl = Get-JavaProperty $properties 'spring.datasource.url' -AllowCommented
-    $username = Get-JavaProperty $properties 'spring.datasource.username' -AllowCommented
+    $jdbcUrl = if ($env:DB_LOCAL_URL) { $env:DB_LOCAL_URL } else { 'jdbc:postgresql://localhost:5432/postgres' }
+    $username = if ($env:DB_LOCAL_USERNAME) { $env:DB_LOCAL_USERNAME } else { 'postgres' }
     $password = $env:DB_LOCAL_PASSWORD
     if (-not $password) {
         throw 'DB_LOCAL_PASSWORD is not set. Follow Chapter 14.1 in Springboot Gradle Lab.md.'

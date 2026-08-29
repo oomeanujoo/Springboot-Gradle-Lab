@@ -834,6 +834,54 @@ The launcher reads secrets from the machine's environment, supplies the selected
 
 🧠 **Memorize this line:** *"JDBC is how the Spring application connects; `psql` is how I connect interactively. Both PostgreSQL and CockroachDB accept the PostgreSQL protocol, but CockroachDB is a distributed SQL database with compatibility boundaries, not merely hosted PostgreSQL."*
 
+### 14.2 Switching the Spring Boot database per practice scenario
+
+Terminal access and application routing are two separate things: `db-shell.ps1` opens an interactive SQL connection, while a **Spring profile** tells the microservice which datasource its repositories should use.
+
+| Scenario choice | Spring profile | Configuration file | Database that receives repository writes |
+|---|---|---|---|
+| Local practice (default) | `local-db` | `application-local-db.properties` | PostgreSQL `postgres` on `localhost:5432` |
+| Distributed/cloud practice | `cloud-db` | `application-cloud-db.properties` | CockroachDB Cloud `defaultdb` |
+
+The shared `application.properties` contains `spring.profiles.active=${DB_PROFILE:local-db}`. Therefore, forgetting to choose defaults to the local database—not the hosted database. Never activate both profiles together because both define the same datasource keys and the winning value would depend on property precedence.
+
+#### Recommended CMD workflow for every scenario
+
+Open CMD in the workspace and explicitly select the target:
+
+```bat
+rem Verify local PostgreSQL, then select it in this CMD window
+call scripts\use-db.cmd local
+gradlew.bat bootRun
+
+rem OR verify CockroachDB Cloud, then select it in this CMD window
+call scripts\use-db.cmd cloud
+gradlew.bat bootRun
+```
+
+`use-db.cmd` first runs a real connection check. Only after that succeeds does it set `DB_PROFILE` and print which database will receive writes. The variable belongs to that CMD window, so switching one terminal does not silently change another running scenario.
+
+Without the helper, the equivalent commands are:
+
+```bat
+set DB_PROFILE=local-db
+gradlew.bat bootRun
+
+set DB_PROFILE=cloud-db
+gradlew.bat bootRun
+```
+
+PowerShell equivalent:
+
+```powershell
+$env:DB_PROFILE = 'local-db'   # or 'cloud-db'
+.\gradlew.bat bootRun
+```
+
+**Important current-code boundary:** these two datasource profiles are now configured, but `spring-boot-starter-data-jpa` and the PostgreSQL driver are still commented out in `build.gradle`, as explained at the start of Chapter 14. Until those dependencies and the existing broken entity/repository code are repaired, the application cannot perform JPA writes. The profile switch is the routing foundation; each new working database scenario must state its intended profile and have the required tables/schema on that target.
+
+🧠 **Memorize this line:** *"I select one Spring profile per scenario: `local-db` for safe local practice or `cloud-db` for CockroachDB. The profile changes datasource configuration, while credentials remain external environment variables."*
+
 **See also:** `D:\Le\Springboot Lab\Springboot Lab.md`, Chapter 16 (Worked Interview Answer — Fetching All Active Customers) — that service has JPA **fully wired** to a live Postgres instance (`spring-boot-starter-data-jpa` active, real `CustomerEntity`/`CustomerRepository` that actually run), the working counterpart to this chapter's broken-but-written entities. Same concept, opposite wiring state.
 
 ---
